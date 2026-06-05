@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+data/*.db
+data/*.db.bak
+data/*.db.old
+.DS_Store
+*.zip
+preview.html

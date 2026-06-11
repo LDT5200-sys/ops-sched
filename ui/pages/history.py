@@ -9,7 +9,7 @@ from database.crud import (
 )
 from config import AssignmentType
 from ui.styles import apply_styles, page_header, section_title, kpi_row, note
-from ui.components.schedule_grid import render_entries_grid
+from ui.components.schedule_grid import render_entries_grid, render_traditional_grid
 from ui.components.summary_cards import render_summary_cards
 from utils.dates import get_week_dates, format_date
 from utils.export import export_to_excel
@@ -62,7 +62,23 @@ def main():
 
     # ── 排班矩阵 ─────────────────────────────────
     section_title("排班矩阵")
-    solution, names = render_entries_grid(sched.entries, staff_map, week_dates=week_dates)
+
+    # 显示格式切换
+    view_mode = st.radio("显示格式", ["传统班表（行=班次，列=日期）",
+                                       "人员矩阵（行=人，列=日期）"],
+                          horizontal=True, index=0, key="hist_view")
+
+    # 先重建 solution（供传统格式使用）
+    id_to_idx = {sid: i for i, sid in enumerate(staff_ids)}
+    names = [staff_map.get(sid, f"#{sid}") for sid in staff_ids]
+    solution = {}
+    for e in sched.entries:
+        solution[(id_to_idx[e.staff_id], e.day_of_week)] = AssignmentType(e.assignment_type)
+
+    if view_mode.startswith("传统"):
+        render_traditional_grid(solution, names, week_dates=week_dates)
+    else:
+        render_entries_grid(sched.entries, staff_map, week_dates=week_dates)
 
     # ── 工时对账 ─────────────────────────────────
     section_title("工时对账")

@@ -104,6 +104,7 @@ def _build_traditional_rows(num_days=7):
         ("06:00-14:00", [AssignmentType.EARLY], "cell-early"),
         ("12:00-20:00", [AssignmentType.MID], "cell-mid"),
         ("18:00-02:00", [AssignmentType.LATE], "cell-late"),
+        ("支援 (外派)", [AssignmentType.EXTERNAL], "cell-external"),
         ("坐班 (不限时)", [AssignmentType.OFFICE], "cell-office"),
         ("休息 (全天)", [AssignmentType.REST], "cell-rest"),
     ]

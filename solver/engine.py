@@ -7,7 +7,7 @@ from solver.hard_constraints import add_hard_constraints
 from solver.soft_constraints import add_soft_constraints
 
 
-def build_and_solve(num_people, params, timeout=30):
+def build_and_solve(num_people, params, num_days=7, timeout=30):
     """构建 CP-SAT 模型并求解。
 
     Args:
@@ -16,28 +16,31 @@ def build_and_solve(num_people, params, timeout=30):
             - rest_days: dict {p_index: int}  每人休息天数
             - office_quota: dict {p_index: int}  每人坐班天数
             - external_total: int  外派总天数
+            - external_daily: dict {d: int}  每天外派人数（可选）
             - external_exclude: set of p_index  不可排外派的人
             - fixed_assignments: list of (p, d, t)  固定班次
+            - no_office_days: set of d  禁止坐班的日期（默认{5,6}）
+            - no_shift_days: set of d  禁止跟播的日期（如节假日）
             - max_consecutive_work: int  最大连续工作天数
             - prev_shift_counts: dict {p_index: {...}}  历史班次统计
             - priority_rest: list of p_index  优先休息的人
             - priority_rest_weight: int
+        num_days: 排班天数（默认7，支持14天跨周）
         timeout: 求解超时秒数
 
     Returns:
-        (status, solution): status 为 'OPTIMAL'/'FEASIBLE'/'INFEASIBLE',
-                           solution 为 {(p, d): AssignmentType} 或 None
+        (status, solution, objective_value): solution 为 {(p, d): AssignmentType} 或 None
     """
     model = cp_model.CpModel()
 
     # 1. 创建决策变量
-    x, shift_types = create_variables(model, num_people)
+    x, shift_types = create_variables(model, num_people, num_days)
 
     # 2. 添加硬约束
-    add_hard_constraints(model, x, num_people, 7, shift_types, params)
+    add_hard_constraints(model, x, num_people, num_days, shift_types, params)
 
     # 3. 添加软约束 + 目标函数
-    obj_terms = add_soft_constraints(model, x, num_people, 7, shift_types, params)
+    obj_terms = add_soft_constraints(model, x, num_people, num_days, shift_types, params)
 
     if obj_terms:
         model.Minimize(sum(obj_terms))
@@ -51,21 +54,21 @@ def build_and_solve(num_people, params, timeout=30):
     status = solver.Solve(model)
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-        solution = _extract_solution(solver, x, num_people)
+        solution = _extract_solution(solver, x, num_people, num_days)
         status_str = 'OPTIMAL' if status == cp_model.OPTIMAL else 'FEASIBLE'
         return status_str, solution, int(solver.ObjectiveValue())
     else:
         return 'INFEASIBLE', None, None
 
 
-def _extract_solution(solver, x, num_people):
+def _extract_solution(solver, x, num_people, num_days=7):
     """从求解器提取结果字典。"""
     all_types = [AssignmentType.REST, AssignmentType.EARLY, AssignmentType.MID,
                  AssignmentType.LATE, AssignmentType.OFFICE, AssignmentType.EXTERNAL]
 
     solution = {}
     for p in range(num_people):
-        for d in range(7):
+        for d in range(num_days):
             for t in all_types:
                 if solver.Value(x[(p, d, t)]) == 1:
                     solution[(p, d)] = t

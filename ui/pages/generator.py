@@ -360,7 +360,10 @@ def main():
             render_traditional_grid(solution, names, week_dates=week_dates)
             trad_text = build_traditional_text(solution, names, week_dates=week_dates)
             with st.expander("📋 复制纯文本（粘贴到在线表格）", expanded=False):
-                st.text_area("排班表", value=trad_text, height=200, key="trad_textarea")
+                # 强制刷新 text_area 值，避免 Streamlit key 缓存旧内容
+                st.session_state["trad_textarea"] = trad_text
+                st.text_area("排班表", height=200, key="trad_textarea",
+                             label_visibility="collapsed")
         current = solution
     else:
         with st.container(key="matrix_view_container"):

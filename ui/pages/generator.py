@@ -339,30 +339,38 @@ def main():
         ("在岗人数", len(names), ""),
     ])
 
-    # 显示格式切换
+    # 显示格式切换（用 container 稳定包裹，避免切换时 DOM 冲突）
+    if "view_mode" not in st.session_state:
+        st.session_state.view_mode = "传统班表（行=班次，列=日期）"
     view_mode = st.radio("显示格式", ["人员矩阵（行=人，列=日期）",
                                        "传统班表（行=班次，列=日期）"],
-                          horizontal=True, index=1)
+                          horizontal=True, index=1, key="view_mode_radio",
+                          on_change=lambda: st.session_state.update(
+                              view_mode=st.session_state.view_mode_radio))
+    st.session_state.view_mode = view_mode
 
-    manual = False  # 默认
+    # 手动微调 toggle 始终渲染（避免条件创建/销毁）
+    manual = st.toggle("手动微调模式", value=False,
+                       help="开启后可直接编辑矩阵，修改后重新校验约束",
+                       key="manual_toggle",
+                       disabled=view_mode.startswith("传统"))
+
     if view_mode.startswith("传统"):
-        # 传统格式 HTML 表格
-        render_traditional_grid(solution, names, week_dates=week_dates)
-        # 同时提供可复制纯文本
-        trad_text = build_traditional_text(solution, names, week_dates=week_dates)
-        with st.expander("📋 复制纯文本（粘贴到在线表格）", expanded=False):
-            st.text_area("排班表", value=trad_text, height=200, key="trad_textarea")
+        with st.container(key="trad_view_container"):
+            render_traditional_grid(solution, names, week_dates=week_dates)
+            trad_text = build_traditional_text(solution, names, week_dates=week_dates)
+            with st.expander("📋 复制纯文本（粘贴到在线表格）", expanded=False):
+                st.text_area("排班表", value=trad_text, height=200, key="trad_textarea")
         current = solution
     else:
-        manual = st.toggle("手动微调模式", value=False,
-                           help="开启后可直接编辑矩阵，修改后重新校验约束")
-        if manual:
-            current = render_schedule_editor(solution, names, key_prefix="manual")
-            st.markdown('<div class="tip">修改后点击下方「重新校验」更新结果。</div>',
-                        unsafe_allow_html=True)
-        else:
-            render_readonly_grid(solution, names, week_dates=week_dates)
-            current = solution
+        with st.container(key="matrix_view_container"):
+            if manual:
+                current = render_schedule_editor(solution, names, key_prefix="manual")
+                st.markdown('<div class="tip">修改后点击下方「重新校验」更新结果。</div>',
+                            unsafe_allow_html=True)
+            else:
+                render_readonly_grid(solution, names, week_dates=week_dates)
+                current = solution
 
     section_title("工时对账")
     render_summary_cards(current, names)

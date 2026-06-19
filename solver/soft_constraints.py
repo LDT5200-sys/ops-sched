@@ -69,6 +69,20 @@ def add_soft_constraints(model, x, num_people, num_days, shift_types, params):
                     objective_terms.append(over * 2)  # 权重 2/每0.1偏差
                     objective_terms.append(under * 2)
 
+    # ---- S4: 周期内班次均衡（每人早/中/晚偏离最小化）----
+    for p in range(num_people):
+        this_early = sum(x[(p, d, AssignmentType.EARLY)] for d in range(num_days))
+        this_mid = sum(x[(p, d, AssignmentType.MID)] for d in range(num_days))
+        this_late = sum(x[(p, d, AssignmentType.LATE)] for d in range(num_days))
+        # 惩罚 max(早,中,晚) - min(早,中,晚)，值越大越不均衡
+        max_val = model.NewIntVar(0, num_days, f'bal_max_p{p}')
+        min_val = model.NewIntVar(0, num_days, f'bal_min_p{p}')
+        model.AddMaxEquality(max_val, [this_early, this_mid, this_late])
+        model.AddMinEquality(min_val, [this_early, this_mid, this_late])
+        spread = model.NewIntVar(0, num_days, f'bal_spread_p{p}')
+        model.Add(spread == max_val - min_val)
+        objective_terms.append(spread * 15)  # 惩罚不均衡
+
     # ---- S3: 优先休息（指定人尽早休息） ----
     priority_rest = params.get('priority_rest', [])
     priority_rest_weight = params.get('priority_rest_weight', 50)

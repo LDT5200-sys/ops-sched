@@ -9,7 +9,7 @@ from database.crud import (
 )
 from config import AssignmentType
 from ui.styles import apply_styles, page_header, section_title, kpi_row, note
-from ui.components.schedule_grid import render_entries_grid, render_traditional_grid
+from ui.components.schedule_grid import render_entries_grid, render_traditional_grid, build_traditional_text
 from ui.components.summary_cards import render_summary_cards
 from utils.dates import get_week_dates, format_date
 from utils.export import export_to_excel
@@ -63,10 +63,15 @@ def main():
     # ── 排班矩阵 ─────────────────────────────────
     section_title("排班矩阵")
 
-    # 显示格式切换
+    # 显示格式切换（用 container 稳定包裹，避免切换时 DOM 冲突）
+    if "hist_view_mode" not in st.session_state:
+        st.session_state.hist_view_mode = "传统班表（行=班次，列=日期）"
     view_mode = st.radio("显示格式", ["传统班表（行=班次，列=日期）",
                                        "人员矩阵（行=人，列=日期）"],
-                          horizontal=True, index=0, key="hist_view")
+                          horizontal=True, index=0, key="hist_view",
+                          on_change=lambda: st.session_state.update(
+                              hist_view_mode=st.session_state.hist_view))
+    st.session_state.hist_view_mode = view_mode
 
     # 先重建 solution（供传统格式使用）
     id_to_idx = {sid: i for i, sid in enumerate(staff_ids)}
@@ -76,9 +81,15 @@ def main():
         solution[(id_to_idx[e.staff_id], e.day_of_week)] = AssignmentType(e.assignment_type)
 
     if view_mode.startswith("传统"):
-        render_traditional_grid(solution, names, week_dates=week_dates)
+        with st.container(key="hist_trad_container"):
+            render_traditional_grid(solution, names, week_dates=week_dates)
+            trad_text = build_traditional_text(solution, names, week_dates=week_dates)
+            st.text_area("📋 一键复制（粘贴到在线表格）", value=trad_text, height=140,
+                         key=f"hist_copy_{sched.id}",
+                         help="Cmd+A 全选 → Cmd+C 复制 → 粘贴到飞书/钉钉在线表格")
     else:
-        render_entries_grid(sched.entries, staff_map, week_dates=week_dates)
+        with st.container(key="hist_matrix_container"):
+            render_entries_grid(sched.entries, staff_map, week_dates=week_dates)
 
     # ── 工时对账 ─────────────────────────────────
     section_title("工时对账")

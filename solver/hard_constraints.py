@@ -133,6 +133,13 @@ def add_hard_constraints(model, x, num_people, num_days, shift_types, params):
                 # 晚班(18-2) → 次日禁中班(12-20)：休息仅10h
                 model.Add(x[(p, d, AssignmentType.LATE)] + x[(p, d + 1, AssignmentType.MID)] <= 1)
 
+    # ---- H13: 禁止单休被夹（任何跟播→休→跟播）----
+    for p in range(num_people):
+        for d in range(num_days - 2):
+            for t1 in shift_types:
+                for t2 in shift_types:
+                    model.Add(x[(p, d, t1)] + x[(p, d + 1, AssignmentType.REST)] + x[(p, d + 2, t2)] <= 2)
+
     # ---- H10: 连续工作 ≤ N 天 ----
     max_consecutive = params.get('max_consecutive_work', 5)
     for p in range(num_people):

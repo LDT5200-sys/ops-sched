@@ -6,3 +6,4 @@ data/*.db.old
 .DS_Store
 *.zip
 preview.html
+.venv/

@@ -36,7 +36,8 @@ _LABEL_TO_TYPE = {ASSIGNMENT_LABELS[t]: t for t in _FIXED_TYPES}
 
 def _clear_result():
     for k in ["current_solution", "current_score", "current_status",
-              "current_params", "sel_names", "sel_ids"]:
+              "current_params", "sel_names", "sel_ids",
+              "schedule_saved", "last_saved_week"]:
         st.session_state.pop(k, None)
 
 
@@ -219,9 +220,22 @@ def main():
                     (name_to_pidx[r["人员"]], DAY_NAMES.index(r["星期"]), AssignmentType.REST)
                 )
 
-    # ── 4. 生成按钮 ─────────────────────────────────
+    # ── 4. 操作按钮 ─────────────────────────────────
     divider()
-    gen = st.button("生成排班", type="primary", use_container_width=True)
+    c_gen, c_confirm = st.columns([1, 1])
+    with c_gen:
+        gen = st.button("🔄 生成排班", type="primary", use_container_width=True)
+    with c_confirm:
+        has_result = "current_solution" in st.session_state
+        already_saved = st.session_state.get("schedule_saved", False)
+        if already_saved:
+            st.button("✅ 已记录", disabled=True, use_container_width=True,
+                      help="当前排班已存入历史记录，重新生成后可再次记录")
+            confirm = False
+        else:
+            confirm = st.button("📝 确认并记录", type="secondary",
+                               use_container_width=True, disabled=not has_result,
+                               help="确认排班无误后存入历史记录，避免反复调整时产生冗余记录")
 
     # 上周排班（折叠预览，便于参考接续）
     prev = get_prev_schedule(session, week_start)
@@ -317,6 +331,7 @@ def main():
             "current_solution": solution, "current_score": score,
             "current_status": status, "current_params": params,
             "sel_names": selected_names, "sel_ids": selected_ids,
+            "schedule_saved": False,
         })
 
     if "current_solution" not in st.session_state:
@@ -390,6 +405,24 @@ def main():
         st.markdown('<div class="vbar pass"><span class="ico">✓</span>'
                     '所有硬约束均已满足</div>', unsafe_allow_html=True)
 
+    # ── 确认记录（处理顶部按钮点击）──────────────────
+    if confirm:
+        entries_data = [{
+            "staff_id": ids[p], "day_of_week": d,
+            "assignment_type": int(t), "remark": None,
+        } for (p, d), t in current.items()]
+        config_dict = {
+            "rest_days": {str(k): v for k, v in params.get("rest_days", {}).items()},
+            "office_quota": {str(k): v for k, v in params.get("office_quota", {}).items()},
+            "external_total": params.get("external_total", 0),
+        }
+        save_schedule(session, week_start, entries_data, shift_model=shift_model,
+                      config_json=json.dumps(config_dict, ensure_ascii=False),
+                      solver_score=score)
+        st.session_state["schedule_saved"] = True
+        st.success(f"✅ 已确认并记录（{week_start} 周），可在「历史记录」中查看")
+        st.rerun()
+
     divider()
     b1, b2, b3, b4 = st.columns(4)
     with b1:
@@ -406,6 +439,7 @@ def main():
             save_schedule(session, week_start, entries_data, shift_model=shift_model,
                           config_json=json.dumps(config_dict, ensure_ascii=False),
                           solver_score=score)
+            st.session_state["schedule_saved"] = True
             st.success(f"已保存（{week_start} 周）")
     with b2:
         st.download_button(
@@ -422,6 +456,7 @@ def main():
     with b4:
         if manual and st.button("重新校验", use_container_width=True):
             st.session_state["current_solution"] = current
+            st.session_state["schedule_saved"] = False
             st.rerun()
 
     session.close()

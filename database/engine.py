@@ -6,7 +6,10 @@ from sqlalchemy.orm import sessionmaker, Session
 import os
 import threading
 
-DB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+DB_DIR = os.environ.get(
+    'OPS_SCHED_DATA_DIR',
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data'),
+)
 DB_PATH = os.path.join(DB_DIR, 'scheduling.db')
 
 # 确保 data 目录存在

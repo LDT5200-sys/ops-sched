@@ -1,11 +1,12 @@
-__pycache__/
+.git
+.venv
+.vercel
+.ruff_cache
+__pycache__
 *.pyc
+.DS_Store
 data/*.db
 data/*.db.bak
 data/*.db.old
-.DS_Store
 *.zip
 preview.html
-.venv/
-.vercel/
-.vercel

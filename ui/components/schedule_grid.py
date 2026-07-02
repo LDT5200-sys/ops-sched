@@ -14,7 +14,8 @@ from ui.styles import get_cell_class
 # 标准展示/编辑用的班次顺序
 _DISPLAY_TYPES = [
     AssignmentType.REST, AssignmentType.EARLY, AssignmentType.MID,
-    AssignmentType.LATE, AssignmentType.OFFICE, AssignmentType.EXTERNAL,
+    AssignmentType.EARLY2, AssignmentType.LATE1, AssignmentType.LATE,
+    AssignmentType.OFFICE, AssignmentType.EXTERNAL,
 ]
 
 
@@ -102,12 +103,33 @@ def _build_traditional_rows(num_days=7):
     """传统格式的行定义：(标签, 匹配的AssignmentType列表, css class)。"""
     return [
         ("06:00-14:00", [AssignmentType.EARLY], "cell-early"),
+        ("08:00-16:00", [AssignmentType.EARLY2], "cell-early"),
         ("12:00-20:00", [AssignmentType.MID], "cell-mid"),
+        ("16:00-00:00", [AssignmentType.LATE1], "cell-late"),
         ("18:00-02:00", [AssignmentType.LATE], "cell-late"),
         ("支援 (外派)", [AssignmentType.EXTERNAL], "cell-external"),
         ("坐班 (不限时)", [AssignmentType.OFFICE], "cell-office"),
         ("休息 (全天)", [AssignmentType.REST], "cell-rest"),
     ]
+
+
+def _row_has_assignments(solution, staff_names, row_types, num_days):
+    return any(
+        solution.get((p, d)) in row_types
+        for p in range(len(staff_names))
+        for d in range(num_days)
+    )
+
+
+def _visible_traditional_rows(solution, staff_names, num_days=7):
+    rows = []
+    for row in _build_traditional_rows(num_days):
+        label, row_types, _css = row
+        if AssignmentType.REST in row_types or AssignmentType.OFFICE in row_types or AssignmentType.EXTERNAL in row_types:
+            rows.append(row)
+        elif _row_has_assignments(solution, staff_names, row_types, num_days):
+            rows.append(row)
+    return rows
 
 
 def build_traditional_text(solution, staff_names, num_days=7, week_dates=None,
@@ -118,7 +140,7 @@ def build_traditional_text(solution, staff_names, num_days=7, week_dates=None,
     if remarks is None:
         remarks = {}
 
-    rows_def = _build_traditional_rows()
+    rows_def = _visible_traditional_rows(solution, staff_names, num_days)
 
     lines = []
     header = "班次时段"
@@ -159,7 +181,7 @@ def render_traditional_grid(solution, staff_names, num_days=7, week_dates=None,
     if remarks is None:
         remarks = {}
 
-    rows_def = _build_traditional_rows()
+    rows_def = _visible_traditional_rows(solution, staff_names, num_days)
 
     html = ['<table class="schedule-table"><thead><tr><th>班次时段</th>']
     for d in range(num_days):

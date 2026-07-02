@@ -1,7 +1,7 @@
 """求解引擎：编排建模 → 求解 → 提取结果。"""
 
 from ortools.sat.python import cp_model
-from config import AssignmentType, DAY_NAMES
+from config import AssignmentType, DAY_NAMES, SHIFT_TYPES
 from solver.variables import create_variables
 from solver.hard_constraints import add_hard_constraints
 from solver.soft_constraints import add_soft_constraints
@@ -34,7 +34,8 @@ def build_and_solve(num_people, params, num_days=7, timeout=30):
     model = cp_model.CpModel()
 
     # 1. 创建决策变量
-    x, shift_types = create_variables(model, num_people, num_days)
+    shift_types = list(params.get("shift_types", SHIFT_TYPES))
+    x, shift_types = create_variables(model, num_people, num_days, shift_types)
 
     # 2. 添加硬约束
     add_hard_constraints(model, x, num_people, num_days, shift_types, params)
@@ -64,7 +65,8 @@ def build_and_solve(num_people, params, num_days=7, timeout=30):
 def _extract_solution(solver, x, num_people, num_days=7):
     """从求解器提取结果字典。"""
     all_types = [AssignmentType.REST, AssignmentType.EARLY, AssignmentType.MID,
-                 AssignmentType.LATE, AssignmentType.OFFICE, AssignmentType.EXTERNAL]
+                 AssignmentType.LATE, AssignmentType.OFFICE, AssignmentType.EXTERNAL,
+                 AssignmentType.EARLY2, AssignmentType.LATE1]
 
     solution = {}
     for p in range(num_people):
@@ -84,18 +86,43 @@ def validate_schedule(solution, num_people, num_days, shift_types, params):
     """
     violations = []
     rest_days = params.get('rest_days', {})
-    office_quota = params.get('office_quota', {})
     external_total = params.get('external_total', 0)
     external_exclude = params.get('external_exclude', set())
     fixed_assignments = params.get('fixed_assignments', [])
+    office_requirements = params.get('office_requirements', {})
     max_consecutive = params.get('max_consecutive_work', 5)
+    shift_types = list(params.get('shift_types', shift_types))
 
-    # H1: 每班次每天恰好1人
+    # H1: 每天按允许模式覆盖跟播班次
+    modes = set(params.get('shift_modes', {3}))
     for d in range(num_days):
-        for t in shift_types:
-            count = sum(1 for p in range(num_people) if solution.get((p, d)) == t)
-            if count != 1:
-                violations.append(f"周{['一二三四五六日'][d]} {t.name} 有{count}人（需1人）")
+        counts = {
+            t: sum(1 for p in range(num_people) if solution.get((p, d)) == t)
+            for t in [AssignmentType.EARLY, AssignmentType.MID, AssignmentType.LATE,
+                      AssignmentType.EARLY2, AssignmentType.LATE1]
+        }
+        if modes == {3, 4}:
+            mode3_ok = (
+                counts[AssignmentType.EARLY] == 1
+                and counts[AssignmentType.MID] == 1
+                and counts[AssignmentType.LATE] == 1
+                and counts[AssignmentType.EARLY2] == 0
+                and counts[AssignmentType.LATE1] == 0
+            )
+            mode4_ok = (
+                counts[AssignmentType.EARLY] == 1
+                and counts[AssignmentType.MID] == 0
+                and counts[AssignmentType.LATE] == 1
+                and counts[AssignmentType.EARLY2] == 1
+                and counts[AssignmentType.LATE1] == 1
+            )
+            if not (mode3_ok or mode4_ok):
+                violations.append(f"{DAY_NAMES[d]} 未满足3班或4班覆盖规则")
+        else:
+            for t in shift_types:
+                count = counts.get(t, 0)
+                if count != 1:
+                    violations.append(f"{DAY_NAMES[d]} {t.name} 有{count}人（需1人）")
 
     # H2: 每人休息天数
     for p in range(num_people):
@@ -106,12 +133,12 @@ def validate_schedule(solution, num_people, num_days, shift_types, params):
 
     # H3: 每人每天唯一安排 (自动满足由解的结构)
 
-    # H4: 坐班配额
-    for p in range(num_people):
-        actual_office = sum(1 for d in range(num_days) if solution.get((p, d)) == AssignmentType.OFFICE)
-        expected_office = office_quota.get(p, 0)
-        if actual_office != expected_office:
-            violations.append(f"人员{p} 坐班{actual_office}天（需{expected_office}天）")
+    # H4: 确定坐班名额
+    for p, min_days in office_requirements.items():
+        actual_office = sum(1 for d in range(num_days)
+                            if solution.get((p, d)) == AssignmentType.OFFICE)
+        if actual_office < int(min_days):
+            violations.append(f"人员{p} 坐班{actual_office}天（确定名额至少{min_days}天）")
 
     # H5: 防极限班次
     from config import LATE_SHIFT_TYPES, EARLY_SHIFT_TYPES
@@ -120,7 +147,7 @@ def validate_schedule(solution, num_people, num_days, shift_types, params):
             today = solution.get((p, d))
             tomorrow = solution.get((p, d + 1))
             if today in LATE_SHIFT_TYPES and tomorrow in EARLY_SHIFT_TYPES:
-                violations.append(f"人员{p} 周{['一二三四五六日'][d]}晚班→次日早班（极限班次）")
+                violations.append(f"人员{p} {DAY_NAMES[d]}晚班→次日早班（极限班次）")
 
     # H6: 周六日无坐班
     for p in range(num_people):
@@ -132,7 +159,7 @@ def validate_schedule(solution, num_people, num_days, shift_types, params):
     # H7: 固定班次
     for (p, d, t) in fixed_assignments:
         if solution.get((p, d)) != t:
-            violations.append(f"人员{p} 周{['一二三四五六日'][d]} 应为{t.name}，实际为{solution.get((p, d)).name}")
+            violations.append(f"人员{p} {DAY_NAMES[d]} 应为{t.name}，实际为{solution.get((p, d)).name}")
 
     # H8: 外派排除
     for p in external_exclude:

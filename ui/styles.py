@@ -343,6 +343,325 @@ STYLES = """
         .schedule-table th, .schedule-table td { padding: 7px 6px; }
         .kpi .val { font-size: 1.35rem; }
     }
+
+    /* ===== 主播排班线上版风格覆盖 ===== */
+    :root {
+        --bg: #0f0f13;
+        --surface: #17171e;
+        --surface-soft: #1e1e28;
+        --ink: #f0f0f5;
+        --text: #c7c7d8;
+        --muted: #9090a8;
+        --border: rgba(255,255,255,.08);
+        --border-soft: rgba(255,255,255,.055);
+        --accent: #6c63ff;
+        --accent-strong: #8b84ff;
+        --accent-soft: rgba(108,99,255,.12);
+        --gold: #f0b429;
+        --gold-soft: rgba(240,180,41,.1);
+        --good: #34d399;
+        --warn: #f0b429;
+        --bad: #f87171;
+        --blue: #60a5fa;
+        --r-sm: 8px;
+        --r-md: 8px;
+        --r-lg: 8px;
+        --shadow: none;
+    }
+
+    html, body, .stApp, [class*="css"] {
+        letter-spacing: 0 !important;
+    }
+    .stApp {
+        background: var(--bg);
+        color: var(--ink);
+    }
+    .main .block-container,
+    .block-container {
+        max-width: 1100px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+    section[data-testid="stSidebar"] {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+    }
+    section[data-testid="stSidebar"] .block-container {
+        padding: 0 10px 1rem;
+    }
+    .sidebar-brand {
+        padding: 22px 10px 18px;
+        border-bottom: 1px solid var(--border);
+        margin: 0 -10px 10px;
+    }
+    .sidebar-brand-title {
+        font-size: 15px;
+        font-weight: 750;
+        line-height: 1.3;
+        background: linear-gradient(135deg, var(--accent-strong), var(--gold));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .sidebar-brand-sub {
+        color: #5a5a72;
+        font-size: 11px;
+        margin-top: 3px;
+    }
+    .sidebar-foot {
+        color: #5a5a72;
+        font-size: 11px;
+        padding: 12px 8px 4px;
+        border-top: 1px solid var(--border);
+        margin-top: 12px;
+    }
+    [data-testid="stSidebarNav"] ul {
+        gap: 2px;
+    }
+    [data-testid="stSidebarNav"] a {
+        color: var(--muted) !important;
+        border-radius: var(--r-sm);
+        padding: 10px 12px !important;
+        border: 1px solid transparent;
+    }
+    [data-testid="stSidebarNav"] a:hover {
+        background: var(--surface-soft);
+        color: var(--ink) !important;
+    }
+    [data-testid="stSidebarNav"] a[aria-current="page"] {
+        background: var(--accent-soft);
+        color: var(--accent-strong) !important;
+        border-color: rgba(108,99,255,.25);
+    }
+
+    .page-head {
+        margin-bottom: 1.8rem;
+    }
+    .page-head h1 {
+        color: var(--ink);
+        font-size: 22px;
+        font-weight: 750;
+        letter-spacing: 0;
+        margin-bottom: 6px;
+    }
+    .page-head p {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    .page-head .rule,
+    .rule {
+        background: var(--border);
+    }
+
+    .sec {
+        align-items: center;
+        gap: 8px;
+        margin: 1.7rem 0 .9rem;
+    }
+    .sec::before {
+        display: none;
+    }
+    .sec::after {
+        content: "";
+        height: 1px;
+        flex: 1;
+        background: var(--border);
+    }
+    .sec .t {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+    .sec .s {
+        color: #5a5a72;
+        font-size: 12px;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    .kpi,
+    .staff-card,
+    [data-testid="stExpander"],
+    [data-testid="stDataFrame"],
+    [data-testid="stDataEditor"],
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--r-md) !important;
+        box-shadow: none !important;
+    }
+    .kpi {
+        padding: 14px 16px;
+    }
+    .kpi .lab {
+        color: #5a5a72;
+        letter-spacing: .06em;
+    }
+    .kpi .val {
+        color: var(--ink);
+        font-size: 24px;
+        letter-spacing: 0;
+    }
+    .kpi .val.good,
+    .staff-card-workdays {
+        color: var(--good);
+    }
+    .kpi .val.warn {
+        color: var(--warn);
+    }
+    .kpi .val.bad {
+        color: var(--bad);
+    }
+    .kpi .sub,
+    .staff-card-stats,
+    .staff-card-rest,
+    .tip {
+        color: var(--muted);
+    }
+    .staff-card-name {
+        color: var(--ink);
+    }
+
+    .note {
+        background: var(--accent-soft);
+        border: 1px solid rgba(108,99,255,.25);
+        border-left-width: 1px;
+        color: var(--accent-strong);
+        border-radius: var(--r-sm);
+    }
+    [data-testid="stAlert"] {
+        background: var(--surface-soft);
+        color: var(--text);
+        border-color: var(--border);
+    }
+
+    .stButton > button,
+    .stDownloadButton > button {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: var(--r-sm);
+        color: var(--text);
+        font-weight: 650;
+    }
+    .stButton > button:hover,
+    .stDownloadButton > button:hover {
+        background: var(--surface-soft);
+        border-color: rgba(108,99,255,.45);
+        color: var(--ink);
+        box-shadow: none;
+    }
+    .stButton > button[kind="primary"] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+    }
+
+    label,
+    [data-testid="stWidgetLabel"],
+    [data-testid="stMarkdownContainer"],
+    [data-testid="stText"] {
+        color: var(--text);
+    }
+    [data-baseweb="input"],
+    [data-baseweb="select"] > div,
+    .stNumberInput input,
+    .stTextInput input,
+    textarea,
+    div[data-baseweb="textarea"] textarea {
+        background: var(--surface-soft) !important;
+        border-color: var(--border) !important;
+        color: var(--ink) !important;
+        border-radius: var(--r-sm) !important;
+    }
+    [data-baseweb="input"]:focus-within,
+    [data-baseweb="select"] > div:focus-within,
+    div[data-baseweb="textarea"]:focus-within {
+        border-color: var(--accent) !important;
+    }
+    [role="radiogroup"] label,
+    [data-testid="stCheckbox"] label,
+    [data-testid="stToggle"] label {
+        color: var(--text);
+    }
+
+    [data-testid="stExpander"] summary {
+        color: var(--ink);
+        font-weight: 650;
+    }
+    [data-testid="stExpander"] details {
+        color: var(--text);
+    }
+
+    .schedule-table {
+        background: var(--surface);
+        border-color: var(--border);
+        border-radius: var(--r-md);
+        color: var(--text);
+        box-shadow: none;
+    }
+    .schedule-table th {
+        background: var(--surface-soft);
+        color: var(--muted);
+        border-bottom-color: rgba(255,255,255,.14);
+        font-size: 11px;
+        letter-spacing: 0;
+    }
+    .schedule-table td {
+        border-bottom-color: var(--border);
+        color: var(--text);
+    }
+    .schedule-table th:first-child,
+    .schedule-table td:first-child {
+        background: var(--surface) !important;
+        color: var(--ink) !important;
+        box-shadow: 1px 0 0 var(--border);
+    }
+    .schedule-table th:first-child {
+        background: var(--surface-soft) !important;
+    }
+    .schedule-table th .th-date {
+        color: #5a5a72;
+    }
+    .cell-rest     { background: rgba(255,255,255,.045) !important; color: #9090a8 !important; }
+    .cell-early    { background: rgba(240,180,41,.1) !important; color: #f0b429 !important; }
+    .cell-mid      { background: rgba(96,165,250,.1) !important; color: #60a5fa !important; }
+    .cell-late     { background: rgba(108,99,255,.12) !important; color: #8b84ff !important; }
+    .cell-office   { background: rgba(52,211,153,.1) !important; color: #34d399 !important; }
+    .cell-external { background: rgba(251,146,60,.1) !important; color: #fb923c !important; }
+    .badge-rest     { background: rgba(255,255,255,.055); color: #9090a8; border-color: var(--border); }
+    .badge-early    { background: rgba(240,180,41,.1); color: #f0b429; border-color: rgba(240,180,41,.2); }
+    .badge-mid      { background: rgba(96,165,250,.1); color: #60a5fa; border-color: rgba(96,165,250,.2); }
+    .badge-late     { background: rgba(108,99,255,.12); color: #8b84ff; border-color: rgba(108,99,255,.25); }
+    .badge-office   { background: rgba(52,211,153,.1); color: #34d399; border-color: rgba(52,211,153,.2); }
+    .badge-external { background: rgba(251,146,60,.1); color: #fb923c; border-color: rgba(251,146,60,.2); }
+
+    .vbar.pass {
+        background: rgba(52,211,153,.1);
+        color: var(--good);
+        border: 1px solid rgba(52,211,153,.2);
+    }
+    .vbar.fail {
+        background: rgba(248,113,113,.1);
+        color: var(--bad);
+        border: 1px solid rgba(248,113,113,.2);
+    }
+    .vlist {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--text);
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #5a5a72; }
 </style>
 """
 

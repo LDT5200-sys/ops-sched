@@ -3,6 +3,12 @@
 from ortools.sat.python import cp_model
 from config import AssignmentType
 
+_MODE3_TYPES = [AssignmentType.EARLY, AssignmentType.MID, AssignmentType.LATE]
+_MODE4_TYPES = [AssignmentType.EARLY, AssignmentType.EARLY2,
+                AssignmentType.LATE1, AssignmentType.LATE]
+_ALL_SHIFT_TYPES = [AssignmentType.EARLY, AssignmentType.MID, AssignmentType.LATE,
+                    AssignmentType.EARLY2, AssignmentType.LATE1]
+
 
 def add_hard_constraints(model, x, num_people, num_days, shift_types, params):
     """添加所有硬约束。
@@ -21,10 +27,31 @@ def add_hard_constraints(model, x, num_people, num_days, shift_types, params):
             - fixed_assignments: list of (p, d, t) 固定班次
             - max_consecutive_work: int 最大连续工作天数
     """
-    # ---- H1: 每班次每天恰好1人 ----
-    for d in range(num_days):
-        for t in shift_types:
-            model.AddExactlyOne(x[(p, d, t)] for p in range(num_people))
+    # ---- H1: 每天按允许模式覆盖跟播班次 ----
+    # 只选3班：早/中/晚每天各1人
+    # 只选4班：早/白/午/晚每天各1人
+    # 同时选：每天由求解器选择3班日或4班日；两种模式不分先后，按约束需要出现
+    modes = set(params.get('shift_modes', {3}))
+    if modes == {3, 4}:
+        day_mode3 = {}
+        day_mode4 = {}
+        for d in range(num_days):
+            day_mode3[d] = model.NewBoolVar(f'day{d}_mode3')
+            day_mode4[d] = model.NewBoolVar(f'day{d}_mode4')
+            model.Add(day_mode3[d] + day_mode4[d] == 1)
+            model.AddExactlyOne(x[(p, d, AssignmentType.EARLY)] for p in range(num_people))
+            model.AddExactlyOne(x[(p, d, AssignmentType.LATE)] for p in range(num_people))
+            model.Add(sum(x[(p, d, AssignmentType.MID)] for p in range(num_people)) == day_mode3[d])
+            model.Add(sum(x[(p, d, AssignmentType.EARLY2)] for p in range(num_people)) == day_mode4[d])
+            model.Add(sum(x[(p, d, AssignmentType.LATE1)] for p in range(num_people)) == day_mode4[d])
+    else:
+        for d in range(num_days):
+            for t in shift_types:
+                model.AddExactlyOne(x[(p, d, t)] for p in range(num_people))
+            for t in _ALL_SHIFT_TYPES:
+                if t not in shift_types:
+                    for p in range(num_people):
+                        model.Add(x[(p, d, t)] == 0)
 
     # ---- H2: 每人休息天数（总天数；跨周时可选分周参数）----
     rest_days = params.get('rest_days', {})
@@ -43,16 +70,18 @@ def add_hard_constraints(model, x, num_people, num_days, shift_types, params):
 
     # ---- H3: 每人每天恰好一个安排 ----
     all_types = [AssignmentType.REST, AssignmentType.EARLY, AssignmentType.MID,
-                 AssignmentType.LATE, AssignmentType.OFFICE, AssignmentType.EXTERNAL]
+                 AssignmentType.LATE, AssignmentType.OFFICE, AssignmentType.EXTERNAL,
+                 AssignmentType.EARLY2, AssignmentType.LATE1]
     for p in range(num_people):
         for d in range(num_days):
             model.AddExactlyOne(x[(p, d, t)] for t in all_types)
 
-    # ---- H4: 坐班配额 ----
-    office_quota = params.get('office_quota', {})
-    for p in range(num_people):
-        q = office_quota.get(p, 0)
-        model.Add(sum(x[(p, d, AssignmentType.OFFICE)] for d in range(num_days)) == q)
+    # ---- H4: 坐班硬性名额 ----
+    # office_quota 在 soft_constraints.py 中作为“建议坐班”处理；
+    # office_requirements 用于“确定坐班人员及名额”，日期未固定时由求解器安排。
+    office_requirements = params.get('office_requirements', {})
+    for p, min_days in office_requirements.items():
+        model.Add(sum(x[(p, d, AssignmentType.OFFICE)] for d in range(num_days)) >= int(min_days))
 
     # ---- H5: 防极限班次 (晚班→次日禁早班) ----
     # 3人模式：LATE(18-02) → 次日禁 EARLY(06-14)
@@ -128,10 +157,11 @@ def add_hard_constraints(model, x, num_people, num_days, shift_types, params):
     if no_consecutive_diff:
         for p in range(num_people):
             for d in range(num_days - 1):
-                # 中班(12-20) → 次日禁早班(6-14)：休息仅10h
-                model.Add(x[(p, d, AssignmentType.MID)] + x[(p, d + 1, AssignmentType.EARLY)] <= 1)
-                # 晚班(18-2) → 次日禁中班(12-20)：休息仅10h
-                model.Add(x[(p, d, AssignmentType.LATE)] + x[(p, d + 1, AssignmentType.MID)] <= 1)
+                if AssignmentType.MID in shift_types:
+                    # 中班(12-20) → 次日禁早班(6-14)：休息仅10h
+                    model.Add(x[(p, d, AssignmentType.MID)] + x[(p, d + 1, AssignmentType.EARLY)] <= 1)
+                    # 晚班(18-2) → 次日禁中班(12-20)：休息仅10h
+                    model.Add(x[(p, d, AssignmentType.LATE)] + x[(p, d + 1, AssignmentType.MID)] <= 1)
 
     # ---- H13: 禁止单休被夹（任何跟播→休→跟播）----
     for p in range(num_people):

@@ -17,6 +17,10 @@ from utils.export import export_to_excel
 _STATUS_CN = {"generated": "已生成", "edited": "已编辑", "locked": "已锁定"}
 
 
+def _shift_model_label(value):
+    return "3+4 班" if value == 34 else f"{value} 班"
+
+
 def main():
     apply_styles()
     page_header("历史排班记录", "回看、对比并导出过往每周的排班结果")
@@ -38,7 +42,7 @@ def main():
     for s in schedules:
         wd = get_week_dates(s.week_start)
         labels.append(f"{format_date(wd[0])} – {format_date(wd[-1])}　·　"
-                      f"{s.shift_model} 班　·　{_STATUS_CN.get(s.status, s.status)}")
+                      f"{_shift_model_label(s.shift_model)}　·　{_STATUS_CN.get(s.status, s.status)}")
     idx = st.selectbox("排班周", range(len(schedules)),
                        format_func=lambda i: labels[i], label_visibility="collapsed")
     sched = schedules[idx]
@@ -55,7 +59,7 @@ def main():
     created = sched.created_at.strftime("%Y-%m-%d %H:%M") if sched.created_at else "—"
     kpi_row([
         ("参与人数", len(staff_ids), ""),
-        ("班次模式", f"{sched.shift_model} 班", ""),
+        ("班次模式", _shift_model_label(sched.shift_model), ""),
         ("目标值", sched.solver_score if sched.solver_score is not None else "—", ""),
         ("生成时间", created, ""),
     ])
@@ -102,7 +106,8 @@ def main():
         s = get_staff_shift_stats(session, sid)
         rows.append({
             "姓名": staff_map.get(sid, f"#{sid}"),
-            "早班": s["early"], "中班": s["mid"], "晚班": s["late"],
+            "早班": s["early"], "中班": s["mid"],
+            "白班": s["early2"], "午班": s["late1"], "晚班": s["late"],
             "坐班": s["office"], "外派": s["external"], "总班次": s["total_shifts"],
         })
     stats_df = pd.DataFrame(rows)

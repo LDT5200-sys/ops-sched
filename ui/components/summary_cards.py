@@ -6,8 +6,9 @@ from config import AssignmentType, ASSIGNMENT_LABELS
 from ui.styles import get_badge_class
 
 _DAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
-_SHIFT_ORDER = [AssignmentType.EARLY, AssignmentType.MID, AssignmentType.LATE,
-                AssignmentType.OFFICE, AssignmentType.EXTERNAL]
+_SHIFT_ORDER = [AssignmentType.EARLY, AssignmentType.MID, AssignmentType.EARLY2,
+                AssignmentType.LATE1, AssignmentType.LATE, AssignmentType.OFFICE,
+                AssignmentType.EXTERNAL]
 
 
 def render_summary_cards(solution, staff_names, num_days=7, per_row=3):

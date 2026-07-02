@@ -1,4 +1,4 @@
-name: Deploy
+name: Test
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-and-deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -19,11 +19,3 @@ jobs:
       - run: pip install -r requirements.txt
 
       - run: python test_solver.py
-
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-        with:
-          version: latest
-
-      - run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

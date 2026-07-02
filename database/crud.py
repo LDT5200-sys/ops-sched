@@ -154,7 +154,8 @@ def get_staff_shift_stats(session: Session, staff_id: int,
                           before_week_start: date = None) -> dict:
     """统计某人在指定日期之前的所有班次次数。
 
-    Returns: {'early': N, 'mid': N, 'late': N, 'office': N, 'external': N, 'total_shifts': N}
+    Returns: {'early': N, 'mid': N, 'early2': N, 'late1': N, 'late': N,
+              'office': N, 'external': N, 'total_shifts': N}
     """
     query = session.query(ScheduleEntry).filter(
         ScheduleEntry.staff_id == staff_id
@@ -165,7 +166,10 @@ def get_staff_shift_stats(session: Session, staff_id: int,
         )
 
     entries = query.all()
-    stats = {'early': 0, 'mid': 0, 'late': 0, 'office': 0, 'external': 0, 'total_shifts': 0}
+    stats = {
+        'early': 0, 'mid': 0, 'early2': 0, 'late1': 0, 'late': 0,
+        'office': 0, 'external': 0, 'total_shifts': 0,
+    }
 
     for e in entries:
         t = AssignmentType(e.assignment_type)
@@ -173,6 +177,10 @@ def get_staff_shift_stats(session: Session, staff_id: int,
             stats['early'] += 1
         elif t == AssignmentType.MID:
             stats['mid'] += 1
+        elif t == AssignmentType.EARLY2:
+            stats['early2'] += 1
+        elif t == AssignmentType.LATE1:
+            stats['late1'] += 1
         elif t == AssignmentType.LATE:
             stats['late'] += 1
         elif t == AssignmentType.OFFICE:

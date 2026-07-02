@@ -1,14 +1,17 @@
 [server]
 # Streamlit Cloud 部署配置
 maxUploadSize = 10
+headless = true
+enableCORS = false
+enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
 
 [theme]
 # 配色与 styles.py 保持一致
-primaryColor = "#3e6291"
-backgroundColor = "#f4f5f7"
-secondaryBackgroundColor = "#f9fafb"
-textColor = "#232a31"
+primaryColor = "#6c63ff"
+backgroundColor = "#0f0f13"
+secondaryBackgroundColor = "#17171e"
+textColor = "#f0f0f5"
 font = "sans serif"

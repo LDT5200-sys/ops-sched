@@ -36,7 +36,9 @@ def export_to_excel(solution, staff_names, week_start, num_days=7):
 
     shift_rows = [
         ("早班 06-14", [AssignmentType.EARLY]),
+        ("白班 08-16", [AssignmentType.EARLY2]),
         ("中班 12-20", [AssignmentType.MID]),
+        ("午班 16-00", [AssignmentType.LATE1]),
         ("晚班 18-02", [AssignmentType.LATE]),
         ("支援(外派)", [AssignmentType.EXTERNAL]),
         ("坐班", [AssignmentType.OFFICE]),
@@ -45,6 +47,12 @@ def export_to_excel(solution, staff_names, week_start, num_days=7):
 
     data = {}
     for label, types in shift_rows:
+        is_special = AssignmentType.EXTERNAL in types or AssignmentType.OFFICE in types or AssignmentType.REST in types
+        has_assignment = any(solution.get((p, d)) in types
+                             for p in range(len(staff_names))
+                             for d in range(num_days))
+        if not is_special and not has_assignment:
+            continue
         row = []
         for d in range(num_days):
             matched = []

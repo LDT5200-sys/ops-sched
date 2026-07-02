@@ -1,0 +1,10 @@
+{
+  "experimentalServices": {
+    "ops-sched": {
+      "type": "web",
+      "framework": "flask",
+      "entrypoint": "web.py",
+      "routePrefix": "/"
+    }
+  }
+}
